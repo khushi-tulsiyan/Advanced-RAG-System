@@ -1,53 +1,89 @@
-import os
-import json
-import faiss
-import numpy as np
-from rank_bm25 import BM25Okapi
-from sentence_transformers import SentenceTransformer
+#!/usr/bin/env python3
+"""Chunks the raw corpus and builds the hybrid retrieval index.
 
-DATA_DIR = "../data/processed_chunks"
-VECTOR_STORE_PATH = "../data/vector_store/faiss.index"
-TEXT_STORE_PATH = "../data/vector_store/chunk_texts.json"
+Usage:
+    python scripts/build_index.py
+    python scripts/build_index.py --input-dir data/raw_docs --chunk-size 800
+"""
 
-def build_bm25_index(text_chunks):
-    """Builds a BM25 index from chunked text"""
-    tokenized_chunks = [chunk.split() for chunk in text_chunks]
-    return BM25Okapi(tokenized_chunks)
+from __future__ import annotations
 
-def build_faiss_index(text_chunks, model_name="sentence-transformers/all-MiniLM-L6-v2"):
-    """Builds a FAISS index from chunked text embeddings"""
-    model = SentenceTransformer(model_name)
-    embeddings = model.encode(text_chunks, show_progress_bar=True)
+import argparse
+import logging
+import sys
+from dataclasses import replace
+from pathlib import Path
 
-    index = faiss.IndexFlatL2(embeddings.shape[1])
-    index.add(np.array(embeddings))
-    return index, embeddings
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-def process_documents():
-    """Loads text chunks, builds BM25 & FAISS indexes, and saves them"""
-    all_chunks = []
-    
-    # Load chunked text files
-    for filename in os.listdir(DATA_DIR):
-        if filename.endswith(".json"):
-            with open(os.path.join(DATA_DIR, filename), "r", encoding="utf-8") as f:
-                all_chunks.extend(json.load(f))
+from rag.chunker import TextChunker  # noqa: E402
+from rag.config import settings as default_settings  # noqa: E402
+from rag.embeddings import load_embedder  # noqa: E402
+from rag.retriever import HybridRetriever  # noqa: E402
 
-    # Build indexes
-    print("Building BM25 index...")
-    bm25 = build_bm25_index(all_chunks)
-    
-    print("Building FAISS index...")
-    faiss_index, _ = build_faiss_index(all_chunks)
+logger = logging.getLogger("build_index")
 
-    # Save FAISS index
-    faiss.write_index(faiss_index, VECTOR_STORE_PATH)
-    
-    # Save text chunks for retrieval
-    with open(TEXT_STORE_PATH, "w", encoding="utf-8") as f:
-        json.dump(all_chunks, f, indent=4)
-    
-    print(f"Indexes built & saved! ({len(all_chunks)} documents indexed)")
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--input-dir", type=Path, default=None, help="Directory of .txt/.md documents")
+    parser.add_argument("--data-dir", type=Path, default=None, help="Root data directory for outputs")
+    parser.add_argument("--chunk-size", type=int, default=None, help="Characters per chunk")
+    parser.add_argument("--chunk-overlap", type=int, default=None, help="Character overlap between chunks")
+    parser.add_argument("--embedding-model", type=str, default=None, help="sentence-transformers model name")
+    parser.add_argument("--no-faiss", action="store_true", help="Force the numpy vector backend")
+    parser.add_argument(
+        "--save-chunk-files",
+        action="store_true",
+        help="Also write per-document chunk JSON files to data/processed_chunks",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    args = parse_args()
+
+    overrides = {}
+    if args.data_dir:
+        overrides["data_dir"] = args.data_dir.resolve()
+    if args.chunk_size:
+        overrides["chunk_size"] = args.chunk_size
+    if args.chunk_overlap is not None:
+        overrides["chunk_overlap"] = args.chunk_overlap
+    if args.embedding_model:
+        overrides["embedding_model"] = args.embedding_model
+    settings = replace(default_settings, **overrides) if overrides else default_settings
+    settings.ensure_dirs()
+
+    input_dir = args.input_dir or settings.raw_docs_dir
+    chunker = TextChunker(settings=settings)
+
+    logger.info("Chunking documents from %s", input_dir)
+    if args.save_chunk_files:
+        chunks = chunker.process_documents(input_dir, settings.processed_chunks_dir)
+    else:
+        chunks = chunker.chunk_directory(input_dir)
+
+    if not chunks:
+        logger.error("No chunks produced. Add .txt or .md files to %s and retry.", input_dir)
+        return 1
+
+    logger.info("Embedding %d chunks with %s", len(chunks), settings.embedding_model)
+    embedder = load_embedder(settings.embedding_model)
+    retriever = HybridRetriever.from_documents(
+        chunks, embedder=embedder, settings=settings, prefer_faiss=not args.no_faiss
+    )
+
+    retriever.save(settings)
+    logger.info(
+        "Indexed %d chunks from %d documents -> %s",
+        len(chunks),
+        len({chunk.source for chunk in chunks}),
+        settings.vector_store_dir,
+    )
+    return 0
+
 
 if __name__ == "__main__":
-    process_documents()
+    raise SystemExit(main())
