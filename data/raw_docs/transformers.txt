@@ -1,0 +1,9 @@
+Transformers
+
+The transformer is a neural network architecture built around the self-attention mechanism, introduced in the paper "Attention Is All You Need". Unlike recurrent networks, a transformer processes every position in a sequence in parallel, which makes training far more efficient on modern hardware.
+
+Self-attention computes three projections of each token: a query, a key and a value. The attention weight between two tokens is the scaled dot product of one token's query with the other's key, passed through a softmax. Each token's output is the weighted sum of all value vectors, so every token can attend directly to every other token regardless of distance.
+
+Multi-head attention runs several attention operations in parallel with different learned projections, letting the model attend to different kinds of relationships at once. Because attention itself is order-agnostic, positional encodings are added to the token embeddings to inject sequence order.
+
+Encoder-only transformers such as BERT are used for classification and retrieval. Decoder-only transformers such as the GPT family generate text autoregressively. Encoder-decoder transformers such as T5 are used for translation and summarisation.

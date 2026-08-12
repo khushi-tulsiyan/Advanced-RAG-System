@@ -1,0 +1,9 @@
+Deep Learning
+
+Deep learning is a subfield of machine learning that uses artificial neural networks with many layers. Each layer transforms its input into a slightly more abstract representation, so a deep network learns a hierarchy of features directly from raw data. This removes the manual feature engineering that classical machine learning pipelines depend on.
+
+Training a deep network means minimising a loss function with gradient descent. Backpropagation computes the gradient of the loss with respect to every weight by applying the chain rule backwards through the network. Optimisers such as SGD with momentum and Adam use those gradients to update the weights.
+
+Deep networks are data hungry and prone to overfitting. Regularisation techniques including dropout, weight decay, early stopping and data augmentation constrain the model so that it generalises to examples it has not seen during training.
+
+Convolutional neural networks dominate computer vision because convolution encodes translation invariance and shares weights across spatial positions. Recurrent networks were the standard for sequential data until attention-based architectures replaced them in most language tasks.

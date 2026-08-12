@@ -10,7 +10,8 @@ encoding, and degrades to a no-op when the model is unavailable.
 from __future__ import annotations
 
 import logging
-from typing import List, Protocol, Sequence, runtime_checkable
+from collections.abc import Sequence
+from typing import Protocol, runtime_checkable
 
 from .config import settings as default_settings
 from .types import ScoredChunk
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @runtime_checkable
 class Reranker(Protocol):
-    def rerank(self, query: str, candidates: Sequence[ScoredChunk], top_k: int | None = None) -> List[ScoredChunk]: ...
+    def rerank(self, query: str, candidates: Sequence[ScoredChunk], top_k: int | None = None) -> list[ScoredChunk]: ...
 
 
 class NoOpReranker:
@@ -28,7 +29,7 @@ class NoOpReranker:
 
     model_name = "noop"
 
-    def rerank(self, query: str, candidates: Sequence[ScoredChunk], top_k: int | None = None) -> List[ScoredChunk]:
+    def rerank(self, query: str, candidates: Sequence[ScoredChunk], top_k: int | None = None) -> list[ScoredChunk]:
         results = list(candidates)
         return results[:top_k] if top_k else results
 
@@ -43,7 +44,7 @@ class CrossEncoderReranker:
         self.batch_size = batch_size
         self._model = CrossEncoder(self.model_name)
 
-    def rerank(self, query: str, candidates: Sequence[ScoredChunk], top_k: int | None = None) -> List[ScoredChunk]:
+    def rerank(self, query: str, candidates: Sequence[ScoredChunk], top_k: int | None = None) -> list[ScoredChunk]:
         if not candidates:
             return []
 
@@ -57,7 +58,7 @@ class CrossEncoderReranker:
                 # Keep the retrieval score so callers can inspect what the reranker changed.
                 components={**candidate.components, "retrieval_score": candidate.score},
             )
-            for candidate, score in zip(candidates, scores)
+            for candidate, score in zip(candidates, scores, strict=True)
         ]
         rescored.sort(key=lambda item: item.score, reverse=True)
         return rescored[:top_k] if top_k else rescored
@@ -72,8 +73,7 @@ def load_reranker(model_name: str | None = None, *, allow_fallback: bool = True)
         if not allow_fallback:
             raise
         logger.warning(
-            "Could not load cross-encoder %r (%s). Reranking is disabled; "
-            "results will use fused retrieval order only.",
+            "Could not load cross-encoder %r (%s). Reranking is disabled; results will use fused retrieval order only.",
             name,
             exc,
         )

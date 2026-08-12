@@ -7,8 +7,8 @@ impossible to tell a caller *where* a retrieved passage came from.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -19,13 +19,13 @@ class Chunk:
     text: str
     source: str
     position: int
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, payload: Dict[str, Any]) -> "Chunk":
+    def from_dict(cls, payload: dict[str, Any]) -> Chunk:
         return cls(
             id=payload["id"],
             text=payload["text"],
@@ -42,13 +42,13 @@ class ScoredChunk:
     chunk: Chunk
     score: float
     #: Per-retriever diagnostics, e.g. ``{"dense_rank": 3, "bm25_rank": 11}``.
-    components: Dict[str, float] = field(default_factory=dict)
+    components: dict[str, float] = field(default_factory=dict)
 
     @property
     def text(self) -> str:
         return self.chunk.text
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.chunk.id,
             "text": self.chunk.text,

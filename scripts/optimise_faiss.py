@@ -126,7 +126,7 @@ def measure_recall(exact, compressed, vectors: np.ndarray, sample_size: int, k: 
     _, exact_ids = exact.search(queries, k)
     _, approx_ids = compressed.search(queries, k)
 
-    overlap = sum(len(set(a.tolist()) & set(b.tolist())) for a, b in zip(exact_ids, approx_ids))
+    overlap = sum(len(set(a.tolist()) & set(b.tolist())) for a, b in zip(exact_ids, approx_ids, strict=True))
     return overlap / (sample_size * k)
 
 

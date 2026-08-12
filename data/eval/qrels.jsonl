@@ -1,0 +1,8 @@
+{"query": "What is self-attention and how does it work?", "relevant_sources": ["transformers.txt"]}
+{"query": "How does backpropagation train a neural network?", "relevant_sources": ["deep_learning.txt"]}
+{"query": "Why combine BM25 with dense retrieval?", "relevant_sources": ["retrieval.txt"]}
+{"query": "What does product quantisation trade away?", "relevant_sources": ["retrieval.txt"]}
+{"query": "Why use a cross-encoder to rerank passages?", "relevant_sources": ["rag.txt"]}
+{"query": "How should documents be chunked for retrieval?", "relevant_sources": ["rag.txt"]}
+{"query": "What stops a deep network from overfitting?", "relevant_sources": ["deep_learning.txt"]}
+{"query": "What are positional encodings for?", "relevant_sources": ["transformers.txt"]}

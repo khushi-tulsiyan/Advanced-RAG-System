@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Dict, List, Sequence
 
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from .config import Settings, settings as default_settings
+from .config import Settings
+from .config import settings as default_settings
 from .corpus import load_chunks, save_chunks
 from .embeddings import Embedder, embed_texts, load_embedder
 from .types import Chunk, ScoredChunk
@@ -42,7 +43,7 @@ STOPWORDS = frozenset(
 )
 
 
-def tokenize(text: str) -> List[str]:
+def tokenize(text: str) -> list[str]:
     """Lowercases, strips punctuation and drops stopwords for BM25 matching."""
     return [token for token in _TOKEN_RE.findall(text.lower()) if token not in STOPWORDS]
 
@@ -78,7 +79,7 @@ class HybridRetriever:
         embedder: Embedder | None = None,
         settings: Settings = default_settings,
         prefer_faiss: bool = True,
-    ) -> "HybridRetriever":
+    ) -> HybridRetriever:
         """Embeds ``chunks`` and builds an in-memory retriever."""
         embedder = embedder or load_embedder(settings.embedding_model)
         vectors = embed_texts(embedder, [c.text for c in chunks], settings.embedding_batch_size)
@@ -90,7 +91,7 @@ class HybridRetriever:
         cls,
         settings: Settings = default_settings,
         embedder: Embedder | None = None,
-    ) -> "HybridRetriever":
+    ) -> HybridRetriever:
         """Loads a retriever from the artefacts written by ``scripts/build_index.py``."""
         chunks = load_chunks(settings.chunks_path)
         index = load_index(settings.faiss_index_path, settings.embeddings_path)
@@ -123,7 +124,7 @@ class HybridRetriever:
         )
 
     # -- search ----------------------------------------------------------
-    def sparse_search(self, query: str, top_k: int) -> List[tuple[int, float]]:
+    def sparse_search(self, query: str, top_k: int) -> list[tuple[int, float]]:
         """BM25 ranking. Returns ``(chunk_index, score)`` best-first."""
         tokens = tokenize(query)
         if self.bm25 is None or not tokens:
@@ -135,7 +136,7 @@ class HybridRetriever:
         # A zero score means no query term matched; keeping those adds only noise.
         return [(int(i), float(scores[i])) for i in top if scores[i] > 0]
 
-    def dense_search(self, query: str, top_k: int) -> List[tuple[int, float]]:
+    def dense_search(self, query: str, top_k: int) -> list[tuple[int, float]]:
         """Cosine ranking over the vector index. Returns ``(chunk_index, score)``."""
         if self.vector_index.size == 0:
             return []
@@ -144,11 +145,11 @@ class HybridRetriever:
         # FAISS pads short result sets with -1; those must not index the corpus.
         return [
             (int(idx), float(score))
-            for idx, score in zip(indices[0], scores[0])
+            for idx, score in zip(indices[0], scores[0], strict=True)
             if 0 <= int(idx) < len(self.chunks)
         ]
 
-    def retrieve(self, query: str, top_k: int | None = None, candidate_k: int | None = None) -> List[ScoredChunk]:
+    def retrieve(self, query: str, top_k: int | None = None, candidate_k: int | None = None) -> list[ScoredChunk]:
         """Runs both retrievers and fuses their rankings with RRF."""
         if not query or not query.strip():
             raise ValueError("query must be a non-empty string")
@@ -159,8 +160,8 @@ class HybridRetriever:
         sparse = self.sparse_search(query, candidate_k)
         dense = self.dense_search(query, candidate_k)
 
-        fused: Dict[int, float] = {}
-        components: Dict[int, Dict[str, float]] = {}
+        fused: dict[int, float] = {}
+        components: dict[int, dict[str, float]] = {}
         rrf_k = self.settings.rrf_k
 
         for weight, results, label in (
@@ -180,7 +181,7 @@ class HybridRetriever:
         ]
 
     # Kept for backwards compatibility with the original API.
-    def hybrid_search(self, query: str, top_k: int = 5) -> List[ScoredChunk]:
+    def hybrid_search(self, query: str, top_k: int = 5) -> list[ScoredChunk]:
         return self.retrieve(query, top_k=top_k)
 
     def __len__(self) -> int:

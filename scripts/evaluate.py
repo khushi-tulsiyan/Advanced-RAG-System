@@ -20,7 +20,6 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -41,15 +40,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_examples(path: Path, chunks) -> List[EvalExample]:
+def load_examples(path: Path, chunks) -> list[EvalExample]:
     if not path.exists():
         raise FileNotFoundError(f"No evaluation set at {path}")
 
-    by_source: Dict[str, List[str]] = {}
+    by_source: dict[str, list[str]] = {}
     for chunk in chunks:
         by_source.setdefault(chunk.source, []).append(chunk.id)
 
-    examples: List[EvalExample] = []
+    examples: list[EvalExample] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -64,7 +63,7 @@ def load_examples(path: Path, chunks) -> List[EvalExample]:
     return examples
 
 
-def format_metrics(name: str, metrics: Dict[str, float]) -> str:
+def format_metrics(name: str, metrics: dict[str, float]) -> str:
     body = "  ".join(f"{key}={value:.4f}" for key, value in metrics.items())
     return f"{name:<16} {body}"
 
@@ -85,7 +84,7 @@ def main() -> int:
 
     evaluator = RetrievalEvaluator(k_values=(1, 3, 5, min(10, args.top_k)))
 
-    runs: Dict[str, List[List[str]]] = {
+    runs: dict[str, list[list[str]]] = {
         "hybrid": [
             [result.chunk.id for result in pipeline.query(ex.query, top_k=args.top_k).results] for ex in examples
         ]

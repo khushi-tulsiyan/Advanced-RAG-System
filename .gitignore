@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+
+# Testing / tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Generated index artefacts — rebuild with scripts/build_index.py
+data/vector_store/
+data/processed_chunks/
+models/
+
+# Keep the sample corpus and evaluation set tracked
+!data/raw_docs/
+!data/eval/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

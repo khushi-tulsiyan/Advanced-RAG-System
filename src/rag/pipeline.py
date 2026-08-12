@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
-from .config import Settings, settings as default_settings
+from .config import Settings
+from .config import settings as default_settings
 from .reranker import NoOpReranker, Reranker, load_reranker
 from .retriever import HybridRetriever
 from .types import Chunk, ScoredChunk
@@ -21,11 +23,11 @@ class RetrievalResult:
     """Everything a caller needs to render and debug an answer."""
 
     query: str
-    results: List[ScoredChunk]
+    results: list[ScoredChunk]
     elapsed_ms: float
     reranked: bool
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "query": self.query,
             "results": [result.to_dict() for result in self.results],
@@ -61,7 +63,7 @@ class RAGPipeline:
         self.reranker = reranker if reranker is not None else NoOpReranker()
 
     @classmethod
-    def load(cls, settings: Settings = default_settings, reranker: Reranker | None = None) -> "RAGPipeline":
+    def load(cls, settings: Settings = default_settings, reranker: Reranker | None = None) -> RAGPipeline:
         """Builds a pipeline from persisted index artefacts."""
         retriever = HybridRetriever.load(settings)
         if reranker is None:
@@ -75,13 +77,13 @@ class RAGPipeline:
         settings: Settings = default_settings,
         reranker: Reranker | None = None,
         **retriever_kwargs: Any,
-    ) -> "RAGPipeline":
+    ) -> RAGPipeline:
         """Builds an in-memory pipeline directly from chunks."""
         retriever = HybridRetriever.from_documents(chunks, settings=settings, **retriever_kwargs)
         return cls(retriever, reranker if reranker is not None else NoOpReranker(), settings)
 
     @classmethod
-    def from_directory(cls, input_dir: Path | str, settings: Settings = default_settings) -> "RAGPipeline":
+    def from_directory(cls, input_dir: Path | str, settings: Settings = default_settings) -> RAGPipeline:
         from .retriever import build_retriever_from_directory
 
         retriever = build_retriever_from_directory(input_dir, settings=settings)
@@ -111,11 +113,11 @@ class RAGPipeline:
         )
 
     # Backwards-compatible shim for the original string-list API.
-    def retrieve_answer(self, query: str, top_k: int = 5) -> List[str]:
+    def retrieve_answer(self, query: str, top_k: int = 5) -> list[str]:
         return [result.text for result in self.query(query, top_k=top_k).results]
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         return {
             "num_chunks": len(self.retriever),
             "vector_backend": getattr(self.retriever.vector_index, "backend", "unknown"),

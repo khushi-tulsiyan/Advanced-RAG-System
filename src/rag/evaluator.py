@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import logging
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, List, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class RetrievalEvaluator:
             raise ValueError("k_values must be positive integers")
         self.k_values = tuple(sorted(k_values))
 
-    def evaluate(self, retrieved: Sequence[Sequence[str]], examples: Sequence[EvalExample]) -> Dict[str, float]:
+    def evaluate(self, retrieved: Sequence[Sequence[str]], examples: Sequence[EvalExample]) -> dict[str, float]:
         """Averages metrics over all queries.
 
         ``retrieved[i]`` is the ranked list of ids returned for ``examples[i]``.
@@ -42,16 +42,16 @@ class RetrievalEvaluator:
         if not examples:
             return {}
 
-        totals: Dict[str, float] = {}
-        for ranked_ids, example in zip(retrieved, examples):
+        totals: dict[str, float] = {}
+        for ranked_ids, example in zip(retrieved, examples, strict=True):
             relevant = set(example.relevant_ids)
             for key, value in self._per_query(list(ranked_ids), relevant).items():
                 totals[key] = totals.get(key, 0.0) + value
 
         return {key: value / len(examples) for key, value in sorted(totals.items())}
 
-    def _per_query(self, ranked_ids: List[str], relevant: set[str]) -> Dict[str, float]:
-        metrics: Dict[str, float] = {}
+    def _per_query(self, ranked_ids: list[str], relevant: set[str]) -> dict[str, float]:
+        metrics: dict[str, float] = {}
         if not relevant:
             return {f"recall@{k}": 0.0 for k in self.k_values}
 
@@ -91,7 +91,7 @@ class GenerationEvaluator:
         except ImportError:
             logger.warning("rouge-score is not installed; ROUGE metrics will be skipped.")
 
-    def evaluate_rouge(self, references: Sequence[str], predictions: Sequence[str]) -> Dict[str, float]:
+    def evaluate_rouge(self, references: Sequence[str], predictions: Sequence[str]) -> dict[str, float]:
         _check_pairs(references, predictions)
         if self._rouge is None:
             return {}
@@ -99,13 +99,13 @@ class GenerationEvaluator:
             return {rouge_type: 0.0 for rouge_type in self.rouge_types}
 
         totals = {rouge_type: 0.0 for rouge_type in self.rouge_types}
-        for reference, prediction in zip(references, predictions):
+        for reference, prediction in zip(references, predictions, strict=True):
             scores = self._rouge.score(reference, prediction)
             for rouge_type in totals:
                 totals[rouge_type] += scores[rouge_type].fmeasure
         return {key: value / len(references) for key, value in totals.items()}
 
-    def evaluate_bert_score(self, references: Sequence[str], predictions: Sequence[str]) -> Dict[str, float]:
+    def evaluate_bert_score(self, references: Sequence[str], predictions: Sequence[str]) -> dict[str, float]:
         _check_pairs(references, predictions)
         if not references:
             return {}
@@ -122,7 +122,7 @@ class GenerationEvaluator:
             "bert_f1": f1.mean().item(),
         }
 
-    def evaluate(self, references: Sequence[str], predictions: Sequence[str]) -> Dict[str, Dict[str, float]]:
+    def evaluate(self, references: Sequence[str], predictions: Sequence[str]) -> dict[str, dict[str, float]]:
         return {
             "rouge": self.evaluate_rouge(references, predictions),
             "bert_score": self.evaluate_bert_score(references, predictions),

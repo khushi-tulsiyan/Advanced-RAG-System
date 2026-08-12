@@ -1,0 +1,9 @@
+Information Retrieval
+
+BM25 is a sparse lexical ranking function that scores a document by how often the query terms appear in it, damped by term frequency saturation and normalised by document length. Rare terms contribute more through inverse document frequency. BM25 is strong at exact term matching but blind to synonyms and paraphrase.
+
+Dense retrieval embeds queries and documents into the same vector space with a neural encoder and ranks by cosine similarity. Dense retrievers capture semantic similarity that BM25 misses, but they can fail on rare proper nouns, identifiers and exact codes that never appeared in their training data.
+
+FAISS is a library for efficient similarity search over dense vectors. A flat index computes exact similarity against every vector. IVF indexes partition the space into cells and probe only the nearest ones. Product quantisation compresses vectors into codes, trading recall for a large reduction in memory.
+
+Hybrid retrieval combines sparse and dense signals so their failure modes cancel out. Reciprocal Rank Fusion merges the two ranked lists by summing one over a constant plus the rank of each document, which avoids the problem that BM25 scores and cosine similarities live on incomparable scales.

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, Field
@@ -22,7 +22,7 @@ from .pipeline import RAGPipeline
 logger = logging.getLogger(__name__)
 
 # Populated on startup; ``None`` means the index could not be loaded.
-_state: Dict[str, Any] = {"pipeline": None, "error": None}
+_state: dict[str, Any] = {"pipeline": None, "error": None}
 
 
 @asynccontextmanager
@@ -61,9 +61,7 @@ def get_pipeline() -> RAGPipeline:
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000, description="Natural-language question")
     top_k: int = Field(default=5, ge=1, le=50, description="Number of passages to return")
-    candidate_k: Optional[int] = Field(
-        default=None, ge=1, le=200, description="Candidate pool size before reranking"
-    )
+    candidate_k: int | None = Field(default=None, ge=1, le=200, description="Candidate pool size before reranking")
 
 
 class ResultItem(BaseModel):
@@ -72,19 +70,19 @@ class ResultItem(BaseModel):
     source: str
     position: int
     score: float
-    metadata: Dict[str, Any] = {}
-    components: Dict[str, float] = {}
+    metadata: dict[str, Any] = {}
+    components: dict[str, float] = {}
 
 
 class QueryResponse(BaseModel):
     query: str
-    results: List[ResultItem]
+    results: list[ResultItem]
     elapsed_ms: float
     reranked: bool
 
 
 @app.get("/", tags=["meta"])
-def home() -> Dict[str, str]:
+def home() -> dict[str, str]:
     return {
         "message": "Advanced RAG System",
         "docs": "/docs",
@@ -93,7 +91,7 @@ def home() -> Dict[str, str]:
 
 
 @app.get("/health", tags=["meta"])
-def health() -> Dict[str, Any]:
+def health() -> dict[str, Any]:
     """Reports readiness plus index statistics for monitoring."""
     pipeline = _state.get("pipeline")
     if pipeline is None:
@@ -110,9 +108,7 @@ def retrieve(request: QueryRequest, pipeline: RAGPipeline = Depends(get_pipeline
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception("Query failed")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Retrieval failed"
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Retrieval failed") from exc
     return QueryResponse(**outcome.to_dict())
 
 

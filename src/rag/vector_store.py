@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import List, Protocol, Tuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 
@@ -35,7 +35,7 @@ class VectorIndex(Protocol):
     @property
     def size(self) -> int: ...
 
-    def search(self, query_vectors: np.ndarray, top_k: int) -> Tuple[np.ndarray, np.ndarray]: ...
+    def search(self, query_vectors: np.ndarray, top_k: int) -> tuple[np.ndarray, np.ndarray]: ...
 
 
 class NumpyVectorIndex:
@@ -54,7 +54,7 @@ class NumpyVectorIndex:
     def dimension(self) -> int:
         return int(self.vectors.shape[1]) if self.vectors.size else 0
 
-    def search(self, query_vectors: np.ndarray, top_k: int) -> Tuple[np.ndarray, np.ndarray]:
+    def search(self, query_vectors: np.ndarray, top_k: int) -> tuple[np.ndarray, np.ndarray]:
         queries = normalize(np.asarray(query_vectors, dtype=np.float32))
         if self.size == 0:
             empty = np.zeros((queries.shape[0], 0), dtype=np.float32)
@@ -75,7 +75,7 @@ class NumpyVectorIndex:
         np.save(path, self.vectors)
 
     @classmethod
-    def load(cls, path: Path) -> "NumpyVectorIndex":
+    def load(cls, path: Path) -> NumpyVectorIndex:
         return cls(np.load(path))
 
 
@@ -84,11 +84,11 @@ class FaissVectorIndex:
 
     backend = "faiss"
 
-    def __init__(self, index: "faiss.Index") -> None:  # type: ignore[name-defined]
+    def __init__(self, index: faiss.Index) -> None:  # type: ignore[name-defined]
         self._index = index
 
     @classmethod
-    def build(cls, vectors: np.ndarray) -> "FaissVectorIndex":
+    def build(cls, vectors: np.ndarray) -> FaissVectorIndex:
         if not FAISS_AVAILABLE:
             raise RuntimeError("faiss is not installed; use NumpyVectorIndex instead")
         vectors = normalize(np.asarray(vectors, dtype=np.float32))
@@ -105,7 +105,7 @@ class FaissVectorIndex:
     def dimension(self) -> int:
         return int(self._index.d)
 
-    def search(self, query_vectors: np.ndarray, top_k: int) -> Tuple[np.ndarray, np.ndarray]:
+    def search(self, query_vectors: np.ndarray, top_k: int) -> tuple[np.ndarray, np.ndarray]:
         queries = normalize(np.asarray(query_vectors, dtype=np.float32))
         if self.size == 0:
             empty = np.zeros((queries.shape[0], 0), dtype=np.float32)
@@ -118,7 +118,7 @@ class FaissVectorIndex:
         faiss.write_index(self._index, str(path))
 
     @classmethod
-    def load(cls, path: Path) -> "FaissVectorIndex":
+    def load(cls, path: Path) -> FaissVectorIndex:
         if not FAISS_AVAILABLE:
             raise RuntimeError("faiss is not installed")
         return cls(faiss.read_index(str(path)))
@@ -154,9 +154,7 @@ def load_index(faiss_path: Path, numpy_path: Path) -> VectorIndex:
             f"Found a FAISS index at {faiss_path} but faiss is not installed. "
             "Install faiss-cpu or rebuild the index with scripts/build_index.py."
         )
-    raise FileNotFoundError(
-        f"No vector index found at {faiss_path} or {numpy_path}. Run scripts/build_index.py first."
-    )
+    raise FileNotFoundError(f"No vector index found at {faiss_path} or {numpy_path}. Run scripts/build_index.py first.")
 
 
 def write_manifest(path: Path, **fields: object) -> None:

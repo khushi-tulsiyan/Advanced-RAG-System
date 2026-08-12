@@ -39,6 +39,16 @@ def test_chunks_overlap_to_preserve_context_across_boundaries():
     assert any(overlaps)
 
 
+def test_overlap_does_not_start_mid_word():
+    """A tail sliced blindly yields chunks beginning like 'ong at exact term'."""
+    chunker = TextChunker(chunk_size=120, chunk_overlap=40)
+    text = " ".join(f"distinctiveword{i} filler content here" for i in range(40))
+    vocabulary = set(text.split())
+
+    for chunk in chunker.chunk_text(text):
+        assert chunk.split()[0] in vocabulary, f"chunk starts mid-word: {chunk[:40]!r}"
+
+
 def test_sentence_punctuation_survives_splitting():
     chunker = TextChunker(chunk_size=60, chunk_overlap=10)
     text = "First fact here. Second fact here. Third fact here. Fourth fact here."

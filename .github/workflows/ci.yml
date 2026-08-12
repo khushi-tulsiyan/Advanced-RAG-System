@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # The ML extras are deliberately excluded: the suite runs offline against
+      # the hashing embedder, which keeps CI to seconds instead of minutes.
+      - name: Install
+        run: pip install -e '.[faiss,dev]'
+
+      - name: Lint
+        run: ruff check src tests scripts
+
+      - name: Test
+        run: pytest --cov=rag --cov-report=term-missing
+
+      - name: Smoke test the index build and evaluation
+        run: |
+          python scripts/build_index.py
+          python scripts/evaluate.py --compare --no-reranker

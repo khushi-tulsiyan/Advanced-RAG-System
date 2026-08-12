@@ -7,7 +7,7 @@ name = "advanced-rag-system"
 version = "2.0.0"
 description = "Hybrid (BM25 + dense) retrieval with cross-encoder reranking and a FastAPI service."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 
 # Core runtime. The ML stack is optional so the package installs and its tests
@@ -60,7 +60,7 @@ filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]

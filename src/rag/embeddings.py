@@ -11,7 +11,8 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from typing import List, Protocol, Sequence, runtime_checkable
+from collections.abc import Sequence
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 
@@ -111,7 +112,7 @@ def load_embedder(model_name: str | None = None, *, allow_fallback: bool = True)
         return HashingEmbedder()
 
 
-def embed_texts(embedder: Embedder, texts: List[str], batch_size: int = 32) -> np.ndarray:
+def embed_texts(embedder: Embedder, texts: list[str], batch_size: int = 32) -> np.ndarray:
     """Encodes ``texts``, guaranteeing a correctly shaped float32 matrix."""
     vectors = embedder.encode(texts, batch_size=batch_size)
     vectors = np.asarray(vectors, dtype=np.float32)

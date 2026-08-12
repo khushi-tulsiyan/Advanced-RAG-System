@@ -1,0 +1,9 @@
+Retrieval Augmented Generation
+
+Retrieval augmented generation, or RAG, grounds a language model's output in documents fetched at query time instead of relying only on the parameters learned during training. A RAG system retrieves passages relevant to the user's question and places them in the prompt as context, so the model can cite sources and stay current without retraining.
+
+The retrieval stage typically over-fetches a pool of candidate passages and then reranks them with a cross-encoder. A bi-encoder embeds the query and the document separately, which is fast enough to index millions of passages. A cross-encoder reads the query and document together and scores the pair directly, which is far more accurate but too slow to run over an entire corpus.
+
+Chunking determines what can be retrieved at all. Chunks that are too large dilute the embedding with irrelevant content and waste context; chunks that are too small lose the surrounding context needed to interpret them. Overlapping chunks preserve facts that would otherwise be split across a boundary.
+
+Evaluating RAG means measuring retrieval and generation separately. Recall at k, mean reciprocal rank and nDCG show whether the right passage was found. Faithfulness and answer relevance show whether the generated text actually used it.
