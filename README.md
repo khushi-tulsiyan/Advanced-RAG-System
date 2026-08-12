@@ -90,14 +90,32 @@ make evaluate    # or: python scripts/evaluate.py --compare
 ```
 
 Reports recall@k, precision@k, MRR, nDCG and hit rate for the hybrid pipeline
-against BM25-only and dense-only baselines. On the bundled sample corpus, using
-only the fallback hashing embedder:
+against BM25-only and dense-only baselines. On the bundled sample corpus
+(16 chunks, 8 labelled queries) with `all-MiniLM-L6-v2`:
 
-| Run | recall@10 | nDCG@10 | MRR |
-| --- | --- | --- | --- |
-| hybrid | **0.813** | **0.776** | **1.000** |
-| bm25 only | 0.625 | 0.679 | 1.000 |
-| dense only | 0.719 | 0.613 | 0.744 |
+| Run | recall@5 | recall@10 | nDCG@5 | nDCG@10 | P@3 |
+| --- | --- | --- | --- | --- | --- |
+| bm25 only | 0.594 | 0.625 | 0.662 | 0.679 | 0.625 |
+| dense only | 0.719 | **0.938** | 0.774 | **0.881** | 0.750 |
+| hybrid, no rerank | 0.688 | 0.906 | 0.743 | 0.854 | 0.708 |
+| hybrid + cross-encoder | **0.813** | 0.906 | **0.839** | 0.887 | **0.833** |
+
+**Read this table with suspicion.** Two honest caveats:
+
+- **Dense-only edges out hybrid** here. That is expected at this scale, not a
+  bug: with 16 chunks and `candidate_k=30`, both retrievers return the entire
+  corpus, so RRF just averages two complete rankings and BM25's weaker ordering
+  dilutes the dense one. Hybrid earns its keep on corpora large enough for the
+  two retrievers to disagree about *which* documents are candidates, and on
+  queries containing rare identifiers that embeddings miss. Every query in this
+  sample set is a fluent natural-language question — the case dense retrieval
+  is best at.
+- **8 queries is far too few** to separate these numbers from noise.
+
+The one effect that is unambiguous is reranking: it lifts nDCG@5 from 0.743 to
+0.839 and P@3 from 0.708 to 0.833 by reordering a fixed candidate pool. If you
+want a defensible retrieval comparison, label a few hundred queries over a real
+corpus and tune `RAG_SPARSE_WEIGHT` / `RAG_DENSE_WEIGHT` against them.
 
 Label your own queries in `data/eval/qrels.jsonl`:
 

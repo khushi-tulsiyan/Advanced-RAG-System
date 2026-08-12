@@ -15,14 +15,16 @@ from rag.app import app, get_pipeline
 
 
 @pytest.fixture
-def client(pipeline):
-    """Client wired to the in-memory test pipeline."""
+def client(pipeline, monkeypatch):
+    """Client wired to the in-memory test pipeline.
+
+    The lifespan hook is stubbed out: left alone it calls ``RAGPipeline.load``
+    against the *real* settings, which downloads models and reads whatever
+    index happens to exist on the machine running the tests.
+    """
+    monkeypatch.setattr(app_module.RAGPipeline, "load", classmethod(lambda cls, *a, **kw: pipeline))
     app.dependency_overrides[get_pipeline] = lambda: pipeline
     with TestClient(app) as test_client:
-        # Set state after startup so the lifespan hook cannot overwrite it with
-        # whatever index happens to exist on the developer's machine.
-        app_module._state["pipeline"] = pipeline
-        app_module._state["error"] = None
         yield test_client
     app.dependency_overrides.clear()
     app_module._state.clear()
