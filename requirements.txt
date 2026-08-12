@@ -1,0 +1,22 @@
+# Core runtime — enough to build an index, serve the API and run the tests.
+numpy>=1.24
+rank-bm25>=0.2.2
+fastapi>=0.110
+pydantic>=2.0
+uvicorn[standard]>=0.27
+
+# Approximate nearest-neighbour search. Optional: the system falls back to an
+# exact numpy index when faiss is not installed.
+faiss-cpu>=1.7.4
+
+# Real embedding and reranking models (pulls in torch, ~2GB).
+# Without these the system uses a hashing embedder and skips reranking.
+sentence-transformers>=2.5
+
+# Development and testing.
+pytest>=8.0
+httpx>=0.27
+
+# Optional extras, install as needed:
+#   pip install -r requirements.txt -e '.[train]'  # reranker fine-tuning
+#   pip install -r requirements.txt -e '.[eval]'   # ROUGE / BERTScore
